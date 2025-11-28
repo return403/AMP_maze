@@ -30,27 +30,9 @@ Voraussetzungen
 
 Schnellstart (Windows / PowerShell)
 ---------------------------------
-1. Virtuelle Umgebung erstellen und aktivieren:
+setup_venv.bat starten um venv anzulegen und Module zu laden.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-2. Abhängigkeiten installieren:
-
-```powershell
-pip install -r requirements.txt
-```
-
-3. Anwendung starten:
-
-```powershell
-# GUI starten
-python main.py
-# oder per Skript
-.\start.bat
-```
+start.bat für schnellstart.
 
 Projektstruktur (wichtigste Dateien)
 ----------------------------------
