@@ -3,8 +3,8 @@ import pygame
 import pygame_gui
 import numpy as np
 from collections import deque
-from maze_algorithms import benchmark
-from maze_core import initialize_maze, reset_visited, Open_Random_Walls
+from maze_algorithms import benchmark, benchmark_sol
+from maze_core import initialize_maze, reset_visited, Open_Random_Walls, export_img, maze_to_img
 from ..ui.menu import MenuSelection
 from ..ui.maze_gen import MazeGen
 from ..ui.maze_solve import MazeSolve
@@ -58,7 +58,8 @@ class Game:
         self.heat_map = []
         self.label_stats = []
         self.menu_tab = " "
-        self.data = None
+        self.data_gen = None  # Separate data for gen benchmark
+        self.data_sol = None  # Separate data for sol benchmark
         
         # Initialisierungsschritte
         self.hide_all()
@@ -342,6 +343,10 @@ class Game:
                     pygame.display.update()
                 
                 self.cache_from_screen(self.screen)
+            maze_h, maze_w = self.maze.shape[:2]
+            alg_name = self.gen_ui.selected_alg
+            export_img(self.cached_surface, filename=f"maze_{maze_h}x{maze_w}_{alg_name}.png")
+            maze_to_img(self.maze, filename=f"2_maze_{maze_h}x{maze_w}_{alg_name}.png")
             self.algorithm_running = False
             self.generator = None
             return True
@@ -388,7 +393,8 @@ class Game:
         """
         self.menu_tab = tab_name
         self.hide_all()
-        self.data = None
+        self.data_gen = None
+        self.data_sol = None
         
         tab_handlers = {
             "Generate": lambda: (self.gen_ui.show_(), self.gen_ui.show()),
@@ -453,6 +459,8 @@ class Game:
                 for x in range(maze_w):
                     draw_cell(self.screen, self.maze, x, y, self.cell_size, color=Color.TEAL.value)
             self.cache_from_screen(self.screen)
+            export_img(self.cached_surface, filename=f"maze_{maze_h}x{maze_w}_{alg_name}.png")
+            maze_to_img(self.maze, filename=f"2_maze_{maze_h}x{maze_w}_{alg_name}.png")
         else:
             print("Unbekannter Generator:", alg_name)
             self.generator = None
@@ -631,16 +639,38 @@ class Game:
             self.animation = value
             return
         
-        if typ == "submit" and mode in {"c_gen", "c_solve", "c_analyze"}:
-            self.data = [value, mode]
+        if typ == "submit" and mode == "c_gen":
+            self.data_gen = [value, mode]
+            return
+        
+        if typ == "submit" and mode == "c_solve":
+            self.data_sol = [value, mode]
+            return
+        
+        if typ == "submit" and mode == "c_analyze":
+            # Check if it's submit (generation) or submit_sol (solver benchmark)
+            # For now, store both - they'll be differentiated by the "start" vs "start_sol" handler
+            self.data_gen = [value, mode]
+            self.data_sol = [value, mode]
+            return
+        
+        if typ == "submit_sol" and mode == "c_analyze":
+            # Solver benchmark (no walls_list needed - auto-calculated)
+            self.data_sol = [value, mode]
             return
 
         # Analyze-Modus
-        if typ == "start" and mode == "c_analyze" and self.data is not None:
-            size_max, steps, repeats = self.data[0]
+        if typ == "start" and mode == "c_analyze" and self.data_gen is not None:
+            size_max, steps, repeats = self.data_gen[0]
             algs = [self.gen_ui.DICT[k] for k in self.gen_ui.options]
             algs.pop()  # drop Init_empty
             benchmark(int(size_max), int(steps), int(repeats), self.maze, algs)
+            return
+        
+        if typ == "start_sol" and mode == "c_analyze" and self.data_sol is not None:
+            size_max, steps, repeats = self.data_sol[0]
+            # benchmark_sol berechnet Wandanzahl automatisch basierend auf Größe
+            benchmark_sol(int(size_max), int(steps), int(repeats))
             return
         
         # Open Random Walls
@@ -652,13 +682,13 @@ class Game:
             return
         
         # Generation starten
-        if typ == "start" and mode == "c_gen" and self.data is not None:
-            self._start_generation(self.data[0])
+        if typ == "start" and mode == "c_gen" and self.data_gen is not None:
+            self._start_generation(self.data_gen[0])
             return
 
         # Solving starten
-        if typ == "start" and mode == "c_solve" and self.data is not None:
-            self._start_solving(self.data[0])
+        if typ == "start" and mode == "c_solve" and self.data_sol is not None:
+            self._start_solving(self.data_sol[0])
             return
 
         # Maze IO

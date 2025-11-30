@@ -34,6 +34,7 @@ class Analyze:
         self.coord_list = []
         self.label = []
         
+        # Generation Benchmark UI
         self.label.append(pygame_gui.elements.UILabel(relative_rect=pygame.Rect(
                     x_pos,                      
                     y_pos -25,
@@ -56,11 +57,36 @@ class Analyze:
         self.step_input = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((x_pos+1*(dx+x_size), y_pos+ y_size +dy), (x_size, y_size)), manager=manager)
         self.repeat_input = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((x_pos+2*(dx+x_size),y_pos + y_size +dy), (x_size, y_size)), manager=manager)
 
+        # Solver Benchmark UI
+        self.label.append(pygame_gui.elements.UILabel(relative_rect=pygame.Rect(
+                    x_pos,                      
+                    y_pos+ (y_size +dy)*2 -25,
+                    self.layout["xs_size"], 
+                    self.layout["y_size"]
+                ),text="Sol-Algorithmen Vermessen", manager=manager))
+
+        self.start_sol = self._make_button("start", 0, 2)
+        self.cancel_sol = self._make_button("cancel", 2, 2)
+        self.submit_sol = self._make_button("submit", 1, 2)
+
+        self.label.append(pygame_gui.elements.UILabel(relative_rect=pygame.Rect(
+                    x_pos,                      
+                    y_pos+ (y_size +dy)*3 -25,
+                    self.layout["xs_size"], 
+                    self.layout["y_size"]
+                ),text="Max-Size/Steps/Repeats", manager=manager))
+
+        self.max_input_sol = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((x_pos+0*(dx+x_size), y_pos+ (y_size +dy)*3), (x_size, y_size)), manager=manager)
+        self.step_input_sol = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((x_pos+1*(dx+x_size), y_pos+ (y_size +dy)*3), (x_size, y_size)), manager=manager)
+        self.repeat_input_sol = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((x_pos+2*(dx+x_size),y_pos + (y_size +dy)*3), (x_size, y_size)), manager=manager)
+
     def hide(self):
         """
         Versteckt alle UI-Elemente.
         """
-        for el in (self.start, self.cancel, self.submit, self.max_input, self.step_input, self.repeat_input):
+        for el in (self.start, self.cancel, self.submit, self.max_input, self.step_input, self.repeat_input,
+                   self.start_sol, self.cancel_sol, self.submit_sol, self.max_input_sol, self.step_input_sol, 
+                   self.repeat_input_sol):
             if el is not None:
                 el.hide()
         for i in self.label:
@@ -70,7 +96,9 @@ class Analyze:
         """
         Zeigt alle UI-Elemente.
         """
-        for el in (self.start, self.cancel, self.submit, self.max_input, self.step_input, self.repeat_input):
+        for el in (self.start, self.cancel, self.submit, self.max_input, self.step_input, self.repeat_input,
+                   self.start_sol, self.cancel_sol, self.submit_sol, self.max_input_sol, self.step_input_sol, 
+                   self.repeat_input_sol):
             if el is not None:
                 el.show()
         for i in self.label:
@@ -111,4 +139,10 @@ class Analyze:
             if event.ui_element == self.cancel:
                 return ("cancel", None, "c_analyze")
             if event.ui_element == self.submit:
-                return ("submit", [self.max_input.get_text(),self.step_input.get_text(), self.repeat_input.get_text()], "c_analyze")
+                return ("submit", [self.max_input.get_text(), self.step_input.get_text(), self.repeat_input.get_text()], "c_analyze")
+            if event.ui_element == self.start_sol:
+                return ("start_sol", None, "c_analyze")
+            if event.ui_element == self.cancel_sol:
+                return ("cancel_sol", None, "c_analyze")
+            if event.ui_element == self.submit_sol:
+                return ("submit_sol", [self.max_input_sol.get_text(), self.step_input_sol.get_text(), self.repeat_input_sol.get_text()], "c_analyze")

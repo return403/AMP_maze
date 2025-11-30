@@ -312,3 +312,121 @@ def import_img(
     # Linien → 0, Hintergrund → weight
     heatmap = (1 - mask.astype(np.uint8)) * weight
     return heatmap.astype(np.float32)
+
+def export_img(cached_surface, filename: str = None) -> bool:
+    """Exportiert das zwischengespeicherte Maze-Rendering als Bilddatei.
+    
+    Konvertiert die pygame Surface aus der Game-Klasse in ein PIL-Image
+    und speichert es als PNG-Datei. Der Dateiname enthält automatisch
+    die Größe des Mazes (z.B. maze_50x50.png).
+    
+    Args:
+        cached_surface: pygame.Surface Objekt aus Game.cached_surface.
+        filename: Optionaler Ausgabedateiname. Wenn None, wird automatisch
+                  generiert als "maze_WIDTHxHEIGHT.png".
+    
+    Returns:
+        True wenn erfolgreich, False bei Fehler.
+    
+    Raises:
+        TypeError: Wenn cached_surface nicht vom Typ pygame.Surface ist.
+        IOError: Wenn Datei nicht geschrieben werden kann.
+    """
+    if cached_surface is None:
+        print("Fehler: cached_surface ist None. Bitte erst ein Maze rendern.")
+        return False
+    
+    try:
+        import pygame
+        
+        # Konvertiere pygame Surface zu PIL Image
+        raw_str = pygame.image.tobytes(cached_surface, "RGB")
+        width, height = cached_surface.get_size()
+        pil_image = Image.frombytes("RGB", (width, height), raw_str)
+        
+        # Generiere Dateiname mit Maze-Größe wenn nicht angegeben
+        if filename is None:
+            # Berechne Maze-Größe aus Surface-Größe (pixel_size ≈ cell_size)
+            maze_size = int(width)  # Approximation der Mazegröße
+            filename = f"maze_{maze_size}x{maze_size}.png"
+        
+        # Speichere als PNG
+        pil_image.save(filename)
+        print(f"✓ Maze erfolgreich exportiert: {filename}")
+        return True
+        
+    except ImportError:
+        print("Fehler: pygame ist nicht installiert.")
+        return False
+    except Exception as e:
+        print(f"Fehler beim Export: {str(e)}")
+        return False
+
+
+def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, int, int] = (0, 0, 0), 
+                path_color: Tuple[int, int, int] = (255, 255, 255), filename: str = None) -> bool:
+    """Konvertiert ein Maze-Array direkt in eine PNG-Bilddatei.
+    
+    Malt das Maze als Bild, wobei Wände als schwarze Linien und Pfade als 
+    weiße Flächen dargestellt werden. Nutzt DIR_MAP für konsistente Richtungsverarbeitung.
+    
+    Args:
+        maze: Maze-Array der Form (height, width, 5).
+        cell_size: Pixelgröße pro Zelle (Standard: 10).
+        wall_color: RGB-Farbe für Wände (Standard: schwarz = (0, 0, 0)).
+        path_color: RGB-Farbe für Pfade (Standard: weiß = (255, 255, 255)).
+        filename: Optionaler Ausgabedateiname. Wenn None, wird automatisch
+                  generiert als "maze_HEIGHTxWIDTH.png".
+    
+    Returns:
+        True wenn erfolgreich, False bei Fehler.
+    """
+    if maze is None or maze.size == 0:
+        print("Fehler: Maze ist leer oder None.")
+        return False
+    
+    try:
+        h, w = maze.shape[:2]
+        
+        # Berechne Bildgröße
+        img_width = w * cell_size + 1
+        img_height = h * cell_size + 1
+        
+        # Erstelle Bild (Pfade-Farbe als Hintergrund)
+        pil_image = Image.new("RGB", (img_width, img_height), path_color)
+        pixels = pil_image.load()
+        
+        # Male Zellen und Wände mittels DIR_MAP
+        for y in range(h):
+            for x in range(w):
+                px = x * cell_size
+                py = y * cell_size
+                
+                # Nutze DIR_MAP für konsistente Verarbeitung aller Richtungen
+                for direction, (dx, dy, _, wall_idx) in DIR_MAP.items():
+                    if maze[y, x][wall_idx]:  # Wand existiert
+                        if direction == "N":  # Nord-Wand
+                            for i in range(cell_size + 1):
+                                pixels[px + i, py] = wall_color
+                        elif direction == "E":  # Ost-Wand
+                            for i in range(cell_size + 1):
+                                pixels[px + cell_size, py + i] = wall_color
+                        elif direction == "S":  # Süd-Wand
+                            for i in range(cell_size + 1):
+                                pixels[px + i, py + cell_size] = wall_color
+                        elif direction == "W":  # West-Wand
+                            for i in range(cell_size + 1):
+                                pixels[px, py + i] = wall_color
+        
+        # Generiere Dateiname wenn nicht angegeben
+        if filename is None:
+            filename = f"maze_{h}x{w}.png"
+        
+        # Speichere als PNG
+        pil_image.save(filename)
+        print(f"Maze erfolgreich als Bild exportiert: {filename}")
+        return True
+        
+    except Exception as e:
+        print(f"Fehler beim Maze-zu-Bild-Export: {str(e)}")
+        return False

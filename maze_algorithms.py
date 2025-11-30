@@ -5,7 +5,8 @@ Implementiert DFS, Randomized Prim, BFS und A* mit Visualisierungsunterstützung
 from typing import Generator, Dict, List, Tuple, Optional, Callable
 from maze_core import (
     neighbor_dirs, open_wall_index, random_direction, bfs_expand, 
-    initialize_maze, DIR_MAP, in_bounds, reset_visited, h_euk, h_man
+    initialize_maze, DIR_MAP, in_bounds, reset_visited, h_euk, h_man,
+    open_random_walls
 )
 from maze_core import VIS, N, W, E, S
 import numpy as np
@@ -276,6 +277,7 @@ def A_star(start_x: int, start_y: int, maze: np.ndarray, end_x: int, end_y: int,
             continue
         
         closed_list.add(current)
+        maze[current[1], current[0], VIS] = 1  # Setze VIS Flag
         if not measure_mode:
             yield {"type": "close", "pos": current}
         
@@ -474,3 +476,153 @@ def analyze_solve(maze: np.ndarray) -> None:
 
 
 
+def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = None) -> None:
+    """Benchmarkt Maze-Lösungsalgorithmen (BFS, A*) über verschiedene Größen.
+    
+    Misst Performance-Metriken für alle Solver-Algorithmen auf DFS-generierten Labyrinthen:
+    - Algorithmen: BFS, A*_Manhattan, A*_Euclidean, A*_Manhattan_w1.5
+    - Metriken: Laufzeit, erkundete Zellen, Pfadlänge, exploration_ratio, optimal_path_ratio, cells_explored_ratio
+    - Szenarien: Original-Maze + Maze mit konfigurierbaren geöffneten Wänden
+    - Durchschnittswerte über mehrere Läufe pro Konfiguration
+    - Verbesserte Seed-Strategie für größenunabhängige Vergleichbarkeit
+    """
+    def solve_algorithm(alg_name: str, start: Tuple, end: Tuple, maze: np.ndarray) -> Tuple[List, int]:
+        """Führt einen Solver-Algorithmus aus und gibt Pfad + erkundete Zellen zurück."""
+        path_list: List = []
+        
+        if alg_name == "BFS":
+            deque(bfs(start[0], start[1], maze, end[0], end[1], 
+                     measure_mode=True, path_list=path_list), maxlen=0)
+        elif alg_name == "A*_Manhattan":
+            deque(A_star(start[0], start[1], maze, end[0], end[1], 
+                       h_man, 1.0, measure_mode=True, path_list=path_list), maxlen=0)
+        elif alg_name == "A*_Euclidean":
+            deque(A_star(start[0], start[1], maze, end[0], end[1], 
+                       h_euk, 1.0, measure_mode=True, path_list=path_list), maxlen=0)
+        else:  # A*_Manhattan_w1.5
+            deque(A_star(start[0], start[1], maze, end[0], end[1], 
+                       h_man, 1.5, measure_mode=True, path_list=path_list), maxlen=0)
+        
+        explored = np.count_nonzero(maze[:,:,VIS])
+        return path_list, explored
+    
+    # Algorithmen
+    alg_names = ["BFS", "A*_Manhattan", "A*_Euclidean", "A*_Manhattan_w1.5"]
+    results: Dict[int, Dict[int, Dict[str, List]]] = {}
+    wall_scenarios = [0, 10, 25, 50]  # HIER: Wall-Szenarien definieren - Plots passen sich an
+    
+    # Benchmarking Loop
+    for n in range(max(step, 1), max_n, step):
+        results[n] = {}
+        print(f"\n=== Size {n}×{n} ===")
+        
+        for run_idx in range(runs):
+            np.random.seed(42 + run_idx)  # Seed unabhängig von n für Vergleichbarkeit
+            
+            # Generiere Maze EINMAL pro Größe und Run
+            m = initialize_maze(n, n)
+            deque(dfs(0, 0, m, measure_mode=True), maxlen=0)
+            reset_visited(m)
+            
+            start, end = (0, 0), (n - 1, n - 1)
+            
+            # Teste alle Wall-Szenarien auf DIESEM Maze
+            for num_walls in wall_scenarios:
+                if num_walls not in results[n]:
+                    results[n][num_walls] = {name: [] for name in alg_names}
+                
+                # Kopie des Maze für dieses Wall-Szenario
+                m_test = m.copy()
+                if num_walls > 0:
+                    deque(open_random_walls(m_test, int(n*n*(num_walls/100)*4), measure_mode=True), maxlen=0)
+                
+                # Berechne optimalen Pfad mit BFS als Referenz
+                m_ref = m_test.copy()
+                reset_visited(m_ref)
+                optimal_path_list: List = []
+                deque(bfs(start[0], start[1], m_ref, end[0], end[1], 
+                         measure_mode=True, path_list=optimal_path_list), maxlen=0)
+                optimal_path_len = len(optimal_path_list) if optimal_path_list else 1
+                total_cells = n * n
+                
+                for alg_name in alg_names:
+                    reset_visited(m_test)
+                    t_start = time.perf_counter()
+                    path, explored = solve_algorithm(alg_name, start, end, m_test)
+                    elapsed = time.perf_counter() - t_start
+                    path_len = len(path) if path else 0
+                    
+                    # Neue Metriken
+                    exploration_ratio = explored / max(path_len, 1)  # Overhead der Exploration
+                    optimal_path_ratio = path_len / optimal_path_len if optimal_path_len > 0 else 1.0
+                    cells_explored_ratio = explored / total_cells  # Anteil erkundet
+                    
+                    results[n][num_walls][alg_name].append([
+                        elapsed, explored, path_len, exploration_ratio, 
+                        optimal_path_ratio, cells_explored_ratio
+                    ])
+        
+        # Durchschnittsbildung nach allen Runs
+        for num_walls in wall_scenarios:
+            print(f"  walls={num_walls}%")
+            for alg_name in alg_names:
+                data = results[n][num_walls][alg_name]
+                avg = [np.mean([row[i] for row in data]) for i in range(6)]
+                results[n][num_walls][alg_name] = avg
+                print(f"    {alg_name}: {avg[0]:.4f}s, {avg[1]:.0f} cells, {avg[2]:.1f} path, "
+                      f"ratio={avg[4]:.3f}, explored={avg[5]:.2%}")
+    
+    # Plot-Daten sammeln: Ein Plot pro Wall-Szenario (beliebig erweiterbar)
+    plot_scenarios = []
+    for num_walls in wall_scenarios:
+        plot_data = {name: [] for name in alg_names}
+        n_values = []
+        for n in sorted(results.keys()):
+            if num_walls in results[n]:
+                n_values.append(n)
+                for alg_name in alg_names:
+                    plot_data[alg_name].append(results[n][num_walls][alg_name])
+        if n_values:
+            title = f"{num_walls} % der Wände geöffnet" if num_walls > 0 else "Original Maze (0 Wände)"
+            plot_scenarios.append((plot_data, n_values, title))
+    
+    # Plotting
+    metrics = ["time_s", "explored_cells", "path_length", "exploration_ratio", 
+               "optimal_path_ratio", "cells_explored_ratio"]
+    labels = ["Laufzeit (s)", "Erkundete Zellen", "Pfadlänge", "Exploration Ratio",
+              "Pfad/Optimal Ratio", "Erkundete Zellen (%)"]
+    
+    # Stil-Variationen für bessere Unterscheidbarkeit
+    markers = ['o', 's', '^', 'D']
+    linestyles = ['-', '--', '-.', ':']
+    
+    for plot_data, n_values, title in plot_scenarios:
+        cells = np.array(n_values) ** 2
+        print(f"\n[PLOT] {title}")
+        
+        fig, axes = plt.subplots(3, 2, figsize=(16, 18))
+        fig.suptitle(f"Solver-Vergleich: {title}", fontsize=16, fontweight='bold')
+        
+        for m_idx, (metric, label) in enumerate(zip(metrics, labels)):
+            ax = axes.flatten()[m_idx]
+            for i, alg_name in enumerate(alg_names):
+                y = [row[m_idx] for row in plot_data[alg_name]]
+                ax.plot(cells, y, 
+                       marker=markers[i % 4], 
+                       linestyle=linestyles[i % 4],
+                       label=alg_name, 
+                       linewidth=2.5, 
+                       markersize=7,
+                       alpha=0.85)
+            
+            # Spezielle Formatierung für Prozent-Metriken
+            if metric == "cells_explored_ratio":
+                ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y:.0%}'))
+            
+            ax.set(title=label, xlabel="Zellen (n²)", ylabel=label)
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+        
+        fig.tight_layout()
+    
+    plt.show(block=False)
