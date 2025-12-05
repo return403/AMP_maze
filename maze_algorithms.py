@@ -13,7 +13,7 @@ import numpy as np
 import time
 from collections import deque
 import matplotlib
-matplotlib.use('TkAgg')  # Explizites Backend für bessere Stabilität
+matplotlib.use('Agg')  # Non-interactive Backend, interferiert nicht mit Pygame
 import matplotlib.pyplot as plt
 import heapq
 import os
@@ -493,11 +493,16 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
     fig.canvas.draw()  # Force rendering before show
     fig.canvas.flush_events()  # Process GUI events
     
-    # Speichere einzelne Subplots im output_plots Folder
+    # Speichere Gesamtplot
     output_dir = "output_plots"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
+    combined_filename = os.path.join(output_dir, "benchmark_gen_complete.png")
+    fig.savefig(combined_filename, dpi=150, bbox_inches='tight')
+    print(f"✓ Gesamtplot gespeichert: {combined_filename}")
+    
+    # Speichere einzelne Subplots
     for display_idx in range(5):
         ax = axes.flatten()[display_idx]
         # Erstelle Figure für einzelne Achse
@@ -524,7 +529,7 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
         print(f"✓ Subplot gespeichert: {filename}")
         plt.close(fig_single)
     
-    plt.show()
+    print("\n=== Alle Plots gespeichert in output_plots/ ===")
 
 
 def analyze_solve(maze: np.ndarray) -> None:
@@ -698,11 +703,18 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
         fig.canvas.draw()  # Force rendering before show
         fig.canvas.flush_events()  # Process GUI events
         
-        # Speichere einzelne Subplots im output_plots Folder
+        # Speichere Gesamtplot
         output_dir = "output_plots"
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         
+        wall_str = f"{num_walls}percent" if num_walls > 0 else "0_original"
+        combined_filename = os.path.join(output_dir, f"benchmark_sol_walls_{wall_str}_complete.png")
+        fig.savefig(combined_filename, dpi=150, bbox_inches='tight')
+        print(f"✓ Gesamtplot gespeichert: {combined_filename}")
+        plt.close(fig)
+        
+        # Speichere einzelne Subplots
         for m_idx, (metric, label) in enumerate(zip(metrics, labels)):
             ax = axes.flatten()[m_idx]
             # Erstelle Figure für einzelne Achse
@@ -733,4 +745,4 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
             print(f"✓ Subplot gespeichert: {filename}")
             plt.close(fig_single)
     
-    plt.show()
+    print("\n=== Alle Plots gespeichert in output_plots/ ===")
