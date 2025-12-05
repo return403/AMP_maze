@@ -509,7 +509,7 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
     # Algorithmen
     alg_names = ["BFS", "A*_Manhattan", "A*_Euclidean", "A*_Manhattan_w1.5"]
     results: Dict[int, Dict[int, Dict[str, List]]] = {}
-    wall_scenarios = [0, 10, 25, 50]  # HIER: Wall-Szenarien definieren - Plots passen sich an
+    wall_scenarios = [0, 2, 5, 10, 50, 100]  # HIER: Wall-Szenarien definieren - Plots passen sich an
     
     # Benchmarking Loop
     for n in range(max(step, 1), max_n, step):
@@ -528,6 +528,9 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
             
             # Teste alle Wall-Szenarien auf DIESEM Maze
             for num_walls in wall_scenarios:
+                if num_walls == 100:
+                    m = initialize_maze(n, n, arr=[False,False,False,False,False])
+
                 if num_walls not in results[n]:
                     results[n][num_walls] = {name: [] for name in alg_names}
                 
@@ -583,7 +586,7 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
                 for alg_name in alg_names:
                     plot_data[alg_name].append(results[n][num_walls][alg_name])
         if n_values:
-            title = f"{num_walls} % der Wände geöffnet" if num_walls > 0 else "Original Maze (0 Wände)"
+            title = f"≈ {num_walls} % der Wände geöffnet" if num_walls > 0 else "Original Maze (0 Wände)"
             plot_scenarios.append((plot_data, n_values, title))
     
     # Plotting
