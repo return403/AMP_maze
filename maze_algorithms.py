@@ -16,6 +16,7 @@ import matplotlib
 matplotlib.use('TkAgg')  # Explizites Backend für bessere Stabilität
 import matplotlib.pyplot as plt
 import heapq
+import os
 
 
 # ===== Maze-Generierungsalgorithmen =====
@@ -413,11 +414,14 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
     """
     plots: List[List] = []
     
+    # Generiere n-Werte: 1, step, 2*step, 3*step, ... bis max_n (inklusive)
+    n_values_bench = [1] + [step * i for i in range(1, (max_n // step) + 1)]
+    
     for alg in algs:
         data: List[List] = []
         
-        for n in range(1, max_n, step):
-            print(f"Testing {alg.__name__} at size {n}×{n}...")
+        for n in n_values_bench:
+            print(f"\n=== Size {n}×{n} ({alg.__name__}) ===")
             accumulator = [0.0, 0, 0, 0, 0]  # [avg_len, corridors, nodes, deadends, time]
             
             for _ in range(runs):
@@ -439,12 +443,14 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
                 accumulator[4] += elapsed
             
             # Berechne Durchschnittswerte
-            data.append([x / runs for x in accumulator])
+            avg = [x / runs for x in accumulator]
+            data.append(avg)
+            print(f"  {alg.__name__}: {avg[4]:.4f}s, corridors={avg[1]:.0f}, nodes={avg[2]:.0f}, deadends={avg[3]:.0f}, avg_len={avg[0]:.1f}")
         
         plots.append(data)
     
     # Visualisiere Ergebnisse
-    n_values = np.arange(1, max_n, step)
+    n_values = np.array(n_values_bench)
     cells = n_values ** 2
     labels = [alg.__name__ for alg in algs]
     metrics = ["time_s", "corridor_count", "node_count", "deadend_count", "avg_corridor_len"]
@@ -456,8 +462,8 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
     linestyles = ['-', '--', '-.', ':', '-', '--']
     
     # Erstelle einen gemeinsamen Plot mit allen Metriken
-    fig, axes = plt.subplots(3, 2, figsize=(16, 18))
-    fig.suptitle("Maze-Generierungs-Algorithmen: Vergleich", fontsize=16, fontweight='bold')
+    fig, axes = plt.subplots(3, 2, figsize=(18, 20))
+    fig.suptitle("Maze-Generierungs-Algorithmen: Vergleich", fontsize=18, fontweight='bold', y=0.995)
     
     # Mapping: Anzeigereihenfolge → Datenindex im accumulator [avg_len, corridors, nodes, deadends, time]
     data_indices = [4, 1, 2, 3, 0]  # [time, corridors, nodes, deadends, avg_len]
@@ -482,14 +488,41 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
     # Letztes Subplot ausblenden (nur 5 Metriken)
     axes.flatten()[5].set_visible(False)
     
-    fig.tight_layout()
+    fig.tight_layout(rect=[0, 0, 1, 0.99])  # Platz für Suptitle
+    fig.subplots_adjust(hspace=0.20, wspace=0.25)  # Moderater Abstand zwischen Subplots
     fig.canvas.draw()  # Force rendering before show
     fig.canvas.flush_events()  # Process GUI events
     
-    # Speichere Plot als PNG
-    filename = "benchmark_gen_algorithms.png"
-    fig.savefig(filename, dpi=150, bbox_inches='tight')
-    print(f"✓ Benchmark-Plot gespeichert: {filename}")
+    # Speichere einzelne Subplots im output_plots Folder
+    output_dir = "output_plots"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    for display_idx in range(5):
+        ax = axes.flatten()[display_idx]
+        # Erstelle Figure für einzelne Achse
+        fig_single = plt.figure(figsize=(10, 6))
+        ax_single = fig_single.add_subplot(111)
+        
+        data_idx = data_indices[display_idx]
+        for i, (series, label) in enumerate(zip(plots, labels)):
+            y = [row[data_idx] for row in series]
+            ax_single.plot(cells, y, 
+                   marker=markers[i % len(markers)], 
+                   linestyle=linestyles[i % len(linestyles)],
+                   label=label, 
+                   linewidth=2.5, 
+                   markersize=7,
+                   alpha=0.85)
+        
+        ax_single.set(title=metric_labels[display_idx], xlabel="Zellen (n²)", ylabel=metric_labels[display_idx])
+        ax_single.legend()
+        ax_single.grid(True, alpha=0.3)
+        
+        filename = os.path.join(output_dir, f"benchmark_gen_metric_{display_idx+1}_{metric_labels[display_idx].replace(' ', '_').replace('(', '').replace(')', '')}.png")
+        fig_single.savefig(filename, dpi=150, bbox_inches='tight')
+        print(f"✓ Subplot gespeichert: {filename}")
+        plt.close(fig_single)
     
     plt.show()
 
@@ -542,8 +575,11 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
     results: Dict[int, Dict[int, Dict[str, List]]] = {}
     wall_scenarios = [0, 2, 5, 10, 50, 100]  # HIER: Wall-Szenarien definieren - Plots passen sich an
     
+    # Generiere n-Werte: step, 2*step, 3*step, ... bis max_n (inklusive)
+    n_values_sol = [step * i for i in range(1, (max_n // step) + 1)]
+    
     # Benchmarking Loop
-    for n in range(max(step, 1), max_n, step):
+    for n in n_values_sol:
         results[n] = {}
         print(f"\n=== Size {n}×{n} ===")
         
@@ -618,7 +654,7 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
                     plot_data[alg_name].append(results[n][num_walls][alg_name])
         if n_values:
             title = f"≈ {num_walls} % der Wände geöffnet" if num_walls > 0 else "Original Maze (0 Wände)"
-            plot_scenarios.append((plot_data, n_values, title))
+            plot_scenarios.append((plot_data, n_values, title, num_walls))
     
     # Plotting
     metrics = ["time_s", "explored_cells", "path_length", "exploration_ratio", 
@@ -630,12 +666,12 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
     markers = ['o', 's', '^', 'D']
     linestyles = ['-', '--', '-.', ':']
     
-    for plot_data, n_values, title in plot_scenarios:
+    for plot_data, n_values, title, num_walls in plot_scenarios:
         cells = np.array(n_values) ** 2
         print(f"\n[PLOT] {title}")
         
-        fig, axes = plt.subplots(3, 2, figsize=(16, 18))
-        fig.suptitle(f"Solver-Vergleich: {title}", fontsize=16, fontweight='bold')
+        fig, axes = plt.subplots(3, 2, figsize=(18, 20))
+        fig.suptitle(f"Solver-Vergleich: {title}", fontsize=18, fontweight='bold', y=0.995)
         
         for m_idx, (metric, label) in enumerate(zip(metrics, labels)):
             ax = axes.flatten()[m_idx]
@@ -657,14 +693,44 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
             ax.legend()
             ax.grid(True, alpha=0.3)
         
-        fig.tight_layout()
+        fig.tight_layout(rect=[0, 0, 1, 0.99])  # Platz für Suptitle
+        fig.subplots_adjust(hspace=0.20, wspace=0.25)  # Moderater Abstand zwischen Subplots
         fig.canvas.draw()  # Force rendering before show
         fig.canvas.flush_events()  # Process GUI events
         
-        # Speichere Plot als PNG mit Wall-Szenario im Namen
-        wall_str = f"{num_walls}percent" if num_walls > 0 else "0_original"
-        filename = f"benchmark_sol_walls_{wall_str}.png"
-        fig.savefig(filename, dpi=150, bbox_inches='tight')
-        print(f"✓ Solver-Benchmark gespeichert: {filename}")
+        # Speichere einzelne Subplots im output_plots Folder
+        output_dir = "output_plots"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        for m_idx, (metric, label) in enumerate(zip(metrics, labels)):
+            ax = axes.flatten()[m_idx]
+            # Erstelle Figure für einzelne Achse
+            fig_single = plt.figure(figsize=(10, 6))
+            ax_single = fig_single.add_subplot(111)
+            
+            for i, alg_name in enumerate(alg_names):
+                y = [row[m_idx] for row in plot_data[alg_name]]
+                ax_single.plot(cells, y, 
+                       marker=markers[i % 4], 
+                       linestyle=linestyles[i % 4],
+                       label=alg_name, 
+                       linewidth=2.5, 
+                       markersize=7,
+                       alpha=0.85)
+            
+            # Spezielle Formatierung für Prozent-Metriken
+            if metric == "cells_explored_ratio":
+                ax_single.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y:.0%}'))
+            
+            ax_single.set(title=label, xlabel="Zellen (n²)", ylabel=label)
+            ax_single.legend()
+            ax_single.grid(True, alpha=0.3)
+            
+            wall_str = f"{num_walls}percent" if num_walls > 0 else "0_original"
+            filename = os.path.join(output_dir, f"benchmark_sol_walls_{wall_str}_metric_{m_idx+1}_{label.replace(' ', '_').replace('/', '_').replace('(', '').replace(')', '')}.png")
+            fig_single.savefig(filename, dpi=150, bbox_inches='tight')
+            print(f"✓ Subplot gespeichert: {filename}")
+            plt.close(fig_single)
     
     plt.show()

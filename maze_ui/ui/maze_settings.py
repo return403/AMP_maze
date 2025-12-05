@@ -32,8 +32,9 @@ class Settings:
         
         # Animation-Status
         self.animation_enabled = True
+        self.speed = 50  # 0-100%
         
-        # Label
+        # Label für Animation
         self.label = pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect(
                 (x_pos, y_pos - 25),
@@ -53,6 +54,27 @@ class Settings:
             manager=manager,
         )
         self._update_button_appearance()
+        
+        # Speed-Label
+        self.speed_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect(
+                (x_pos, y_pos + 50),
+                (self.x_size, self.y_size),
+            ),
+            text="Speed: 50%",
+            manager=manager,
+        )
+        
+        # Speed-Slider (10-100)
+        self.speed_slider = pygame_gui.elements.UIHorizontalSlider(
+            relative_rect=pygame.Rect(
+                (x_pos, y_pos + 85),
+                (self.x_size, 25),
+            ),
+            start_value=50,
+            value_range=(10, 100),
+            manager=manager,
+        )
     
     def _get_button_text(self) -> str:
         """
@@ -74,16 +96,23 @@ class Settings:
     
     def handle_event(self, event: pygame.event.EventType):
         """
-        Verarbeitet Button-Klicks.
+        Verarbeitet Button-Klicks und Slider-Änderungen.
         
         Rückgabe:
-            Tuple ("animation", bool, "Settings") oder None.
+            Tuple ("animation", bool, "Settings") für Animation,
+            Tuple ("speed", int, "Settings") für Speed-Slider, oder None.
         """
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.animation_button:
                 self.animation_enabled = not self.animation_enabled
                 self._update_button_appearance()
                 return ("animation", self.animation_enabled, "Settings")
+        
+        if event.type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
+            if event.ui_element == self.speed_slider:
+                self.speed = int(event.value)
+                self.speed_label.set_text(f"Speed: {self.speed}%")
+                return ("speed", self.speed, "Settings")
         
         return None
     
@@ -93,6 +122,8 @@ class Settings:
         """
         self.animation_button.hide()
         self.label.hide()
+        self.speed_label.hide()
+        self.speed_slider.hide()
     
     def show(self) -> None:
         """
@@ -100,3 +131,5 @@ class Settings:
         """
         self.animation_button.show()
         self.label.show()
+        self.speed_label.show()
+        self.speed_slider.show()

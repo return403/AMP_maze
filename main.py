@@ -156,7 +156,6 @@ def main():
     """
     placeholder_maze = initialize_maze(5, 5)
     
-    speed = 50
     clock, screen, manager = init_pygame(placeholder_maze)
     running = True
     start_time = None
@@ -172,6 +171,9 @@ def main():
                 continue
             manager.process_events(event)
             game.handle_event(event)
+        
+        # Speed vom Settings-UI auslesen
+        speed = game.settings_ui.speed
         
         # Algorithmus-Schritte verarbeiten
         if game.algorithm_running and game.generator is not None:
@@ -218,7 +220,9 @@ def main():
         pygame.draw.rect(screen, Color.BLACK.value, ui_panel_rect)
         
         # UI aktualisieren
-        manager.update(clock.tick(speed ** 2))
+        # Bei 10%: 5 FPS (0.2s pro Schritt), bei 100%: 300 FPS
+        fps = 5 + (speed - 10) / 90 * 295
+        manager.update(clock.tick(fps) / 1000.0)
         manager.draw_ui(screen)
         pygame.display.update()
         
