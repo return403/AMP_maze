@@ -12,6 +12,8 @@ from maze_core import VIS, N, W, E, S
 import numpy as np
 import time
 from collections import deque
+import matplotlib
+matplotlib.use('TkAgg')  # Explizites Backend für bessere Stabilität
 import matplotlib.pyplot as plt
 import heapq
 
@@ -445,20 +447,49 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
     n_values = np.arange(1, max_n, step)
     cells = n_values ** 2
     labels = [alg.__name__ for alg in algs]
-    metrics = ["avg_corridor_len", "corridor_count", "node_count", "deadend_count", "time_s"]
+    metrics = ["time_s", "corridor_count", "node_count", "deadend_count", "avg_corridor_len"]
+    metric_labels = ["Laufzeit (s)", "Anzahl Korridore", "Anzahl Kreuzungen", 
+                     "Anzahl Sackgassen", "Ø Korridorlänge"]
     
-    for metric_idx in range(5):
-        plt.figure(figsize=(10, 6))
-        for series, label in zip(plots, labels):
-            y = [row[metric_idx] for row in series]
-            plt.plot(cells, y, marker="o", label=label, linewidth=2)
+    # Stil-Variationen für bessere Unterscheidbarkeit
+    markers = ['o', 's', '^', 'D', 'v', '<']
+    linestyles = ['-', '--', '-.', ':', '-', '--']
+    
+    # Erstelle einen gemeinsamen Plot mit allen Metriken
+    fig, axes = plt.subplots(3, 2, figsize=(16, 18))
+    fig.suptitle("Maze-Generierungs-Algorithmen: Vergleich", fontsize=16, fontweight='bold')
+    
+    # Mapping: Anzeigereihenfolge → Datenindex im accumulator [avg_len, corridors, nodes, deadends, time]
+    data_indices = [4, 1, 2, 3, 0]  # [time, corridors, nodes, deadends, avg_len]
+    
+    for display_idx in range(5):
+        ax = axes.flatten()[display_idx]
+        data_idx = data_indices[display_idx]
+        for i, (series, label) in enumerate(zip(plots, labels)):
+            y = [row[data_idx] for row in series]
+            ax.plot(cells, y, 
+                   marker=markers[i % len(markers)], 
+                   linestyle=linestyles[i % len(linestyles)],
+                   label=label, 
+                   linewidth=2.5, 
+                   markersize=7,
+                   alpha=0.85)
         
-        plt.title(f"Metrik: {metrics[metric_idx]}")
-        plt.xlabel("Zellen (n²)")
-        plt.ylabel(metrics[metric_idx])
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
+        ax.set(title=metric_labels[display_idx], xlabel="Zellen (n²)", ylabel=metric_labels[display_idx])
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+    
+    # Letztes Subplot ausblenden (nur 5 Metriken)
+    axes.flatten()[5].set_visible(False)
+    
+    fig.tight_layout()
+    fig.canvas.draw()  # Force rendering before show
+    fig.canvas.flush_events()  # Process GUI events
+    
+    # Speichere Plot als PNG
+    filename = "benchmark_gen_algorithms.png"
+    fig.savefig(filename, dpi=150, bbox_inches='tight')
+    print(f"✓ Benchmark-Plot gespeichert: {filename}")
     
     plt.show()
 
@@ -627,5 +658,13 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
             ax.grid(True, alpha=0.3)
         
         fig.tight_layout()
+        fig.canvas.draw()  # Force rendering before show
+        fig.canvas.flush_events()  # Process GUI events
+        
+        # Speichere Plot als PNG mit Wall-Szenario im Namen
+        wall_str = f"{num_walls}percent" if num_walls > 0 else "0_original"
+        filename = f"benchmark_sol_walls_{wall_str}.png"
+        fig.savefig(filename, dpi=150, bbox_inches='tight')
+        print(f"✓ Solver-Benchmark gespeichert: {filename}")
     
-    plt.show(block=False)
+    plt.show()
