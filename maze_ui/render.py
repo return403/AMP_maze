@@ -56,7 +56,6 @@ def draw_cell(
             (cx, cy), (cx, cy + cell_size)
         )
 
-
 def draw_maze(
     screen: pygame.Surface,
     maze: np.ndarray,
@@ -80,7 +79,6 @@ def draw_maze(
     for y in range(h):
         for x in range(w):
             draw_cell(screen, maze, x, y, cell_size, color)
-
 
 # Alias für Kompatibilität
 draw_maze_pygame = draw_maze

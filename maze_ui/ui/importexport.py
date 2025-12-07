@@ -109,8 +109,7 @@ class importexport:
             self.options_files.append("_placeHolder")
         self.options_files_dropdown = pygame_gui.elements.UIDropDownMenu(options_list=self.options_files, starting_option=self.options_files[0], 
                                                                          relative_rect=pygame.Rect(self.layout["x"], self.layout["y"]+1*(self.layout["y_size"] +self.layout["dy"]), self.layout["xs_size"], self.layout["y_size"]), manager=self.manager)
-    
-    
+        
     def import_grid(self, dateiname):
         """
         Importiert ein Maze-Grid aus einer JSON-Datei.

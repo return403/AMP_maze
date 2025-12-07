@@ -17,7 +17,7 @@ matplotlib.use('Agg')  # Non-interactive Backend, interferiert nicht mit Pygame
 import matplotlib.pyplot as plt
 import heapq
 import os
-
+import random
 
 # ===== Maze-Generierungsalgorithmen =====
 
@@ -74,12 +74,6 @@ def dfs(start_x: int, start_y: int, maze: np.ndarray, measure_mode: bool = False
             stack.append((nx, ny))
             if not measure_mode:
                 yield {"type": "forward", "from": (x, y), "to": (nx, ny)}
-
-
-import random
-from typing import Dict, Generator, Tuple
-
-import numpy as np
 
 def prim(start_x: int, start_y: int, maze: np.ndarray, measure_mode: bool = False) -> Generator[Dict, None, None]:
     """Randomized Prim's Maze-Generator mit effizienter Frontier-Verwaltung.
@@ -156,7 +150,6 @@ def prim(start_x: int, start_y: int, maze: np.ndarray, measure_mode: bool = Fals
     if not measure_mode:
         yield {"type": "done", "pos": (start_x, start_y)}
     
-
 # ===== Maze-Lösungsalgorithmen =====
 
 def bfs(start_x: int, start_y: int, maze: np.ndarray, end_x: int, end_y: int, 
@@ -221,8 +214,6 @@ def bfs(start_x: int, start_y: int, maze: np.ndarray, end_x: int, end_y: int,
         for p in path:
             yield {"type": "Path", "pos": p}
         yield {"type": "done_bfs", "pos": (end_x, end_y)}
-
-
 
 def A_star(start_x: int, start_y: int, maze: np.ndarray, end_x: int, end_y: int, 
            h_mode: Callable = h_man, weight: float = 1.0, heat_maps: Optional[np.ndarray] = None, 
@@ -338,8 +329,6 @@ def A_star(start_x: int, start_y: int, maze: np.ndarray, end_x: int, end_y: int,
         yield {"type": "done_bfs", "pos": end, "status": "no_path"}
     return None
 
-
-
 # ===== Maze-Analyse =====
 
 def analyze_gen(maze: np.ndarray) -> Tuple[float, int, int, int]:
@@ -413,7 +402,6 @@ def analyze_gen(maze: np.ndarray) -> Tuple[float, int, int, int]:
     
     avg_len = float(np.mean(corridor_lengths)) if corridor_lengths else 0.0
     return avg_len, corridor_count, node_count, deadend_count
-
 
 def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Callable]) -> None:
     """Benchmarkt Maze-Generierungsalgorithmen und visualisiert Ergebnisse.
@@ -547,7 +535,6 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
     
     print("\n=== Alle Plots gespeichert in output_plots/ ===")
 
-
 def analyze_solve(maze: np.ndarray) -> None:
     """Analysiert Lösungs-Eigenschaften eines Maze (Placeholder).
     
@@ -557,9 +544,6 @@ def analyze_solve(maze: np.ndarray) -> None:
         maze: Zu analysierendes Maze-Array.
     """
     print("Analyze solve: Implementation pending")
-
-
-
 
 def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = None) -> None:
     """Benchmarkt Maze-Lösungsalgorithmen (BFS, A*) über verschiedene Größen.

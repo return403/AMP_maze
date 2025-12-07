@@ -34,7 +34,6 @@ STEP_TRANSITIONS = {
     "randomWall": (Color.TEAL.value, Color.TEAL.value),
 }
 
-
 def get_step_color(step: dict, color_scale) -> tuple:
     """Bestimmt die Anzeigefarbe für einen Algorithmus-Visualisierungsschritt.
     
@@ -60,7 +59,6 @@ def get_step_color(step: dict, color_scale) -> tuple:
         return STEP_COLORS.get(step_type)
     
     return None
-
 
 def handle_single_cell_step(screen, game, step: dict) -> None:
     """Visualisiert einen Algorithmenschritt, der eine einzelne Zelle färbt.
@@ -96,7 +94,6 @@ def handle_single_cell_step(screen, game, step: dict) -> None:
         game.cell_size, game.cell_size
     ))
 
-
 def handle_transition_step(screen, game, step: dict) -> None:
     """Visualisiert Übergänge zwischen zwei Zellen (Forward, Backtrack, etc.).
     
@@ -126,7 +123,6 @@ def handle_transition_step(screen, game, step: dict) -> None:
                     game.cell_size, game.cell_size),
     ])
 
-
 def process_algorithm_step(screen, game, step: dict) -> None:
     """Zentrale Verarbeitung von Algorithmus-Visualisierungsschritten.
     
@@ -146,7 +142,6 @@ def process_algorithm_step(screen, game, step: dict) -> None:
     # Übergänge
     elif step_type in {"forward", "backtrack", "frontierNew", "randomWall"}:
         handle_transition_step(screen, game, step)
-
 
 def main():
     """Hauptprogrammschleife für Maze-Generator/Solver.
@@ -246,7 +241,6 @@ def main():
         # Weitere Rendering-Operationen
         game.gen_ui.draw(screen)
         game.sol_ui.draw(screen)
-
 
 if __name__ == "__main__":
     main()

@@ -8,9 +8,6 @@ import heapq
 from math import inf
 from random import random
 
-
-
-
 def ants_colony(start_x, start_y, maze, end_x, end_y,
                 maxit=100, ants=50, decay=0.1, heat_maps=None,
                 measure_mode=False, path_list=None):
@@ -72,8 +69,7 @@ def ants_colony(start_x, start_y, maze, end_x, end_y,
     if best_path is not None and path_list is not None:
         path_list.extend(best_path)
     return
-
-                
+               
 class Ant:
     def __init__(self, start, end, maze, decay):
         self.h, self.w = maze.shape[:2]

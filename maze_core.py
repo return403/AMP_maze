@@ -21,7 +21,6 @@ DIR_MAP = {
 N, E, S, W, VIS = 0, 1, 2, 3, 4
 CELL_COMPONENTS = {"N": N, "E": E, "S": S, "W": W, "VIS": VIS}
 
-
 # ===== Maze-Initialisierung =====
 def initialize_maze(
     width: int, height: int, arr: List[bool] = None
@@ -46,7 +45,6 @@ def initialize_maze(
         dtype=np.bool_
     )
 
-
 # ===== Koordinaten- und Richtungsvalidierung =====
 def in_bounds(x: int, y: int, width: int, height: int) -> bool:
     """Prüft, ob Koordinaten innerhalb der Maze-Grenzen liegen.
@@ -62,7 +60,6 @@ def in_bounds(x: int, y: int, width: int, height: int) -> bool:
     """
     return 0 <= x < width and 0 <= y < height
 
-
 def random_direction(options: List[str]) -> str:
     """Wählt zufällig eine Richtung aus einer Liste aus.
     
@@ -73,7 +70,6 @@ def random_direction(options: List[str]) -> str:
         Ein zufällig ausgewählter Richtungsstring.
     """
     return choice(options)
-
 
 def neighbor_dirs(
     x: int, y: int, maze: np.ndarray, visited: bool
@@ -105,7 +101,6 @@ def neighbor_dirs(
     
     return directions, coordinates
 
-
 # ===== Zustandsmanagement =====
 def reset_visited(maze: np.ndarray) -> None:
     """Setzt alle Besuchsflags des Mazes zurück für Neustarts.
@@ -116,7 +111,6 @@ def reset_visited(maze: np.ndarray) -> None:
         maze: Maze-Array (wird in-place modifiziert).
     """
     maze[:, :, VIS] = False
-
 
 # ===== Algorithmus-Hilfsfunktionen =====
 def bfs_expand(
@@ -154,7 +148,6 @@ def bfs_expand(
     
     return next_positions, parents
 
-
 def open_wall_index(direction: str) -> Tuple[int, int, int, int]:
     """Gibt Wandindizes für Richtung zurück (zum Öffnen von Wänden).
     
@@ -176,7 +169,6 @@ def open_wall_index(direction: str) -> Tuple[int, int, int, int]:
     dx, dy = DIR_MAP[direction][0], DIR_MAP[direction][1]
     return wall_idx, opp_idx, dx, dy
 
-
 # ===== Heuristiken für A* =====
 def h_euk(x: int, y: int, end_x: int, end_y: int) -> float:
     """Euklidische Heuristic (Luftlinien-Distanz) für A*.
@@ -192,7 +184,6 @@ def h_euk(x: int, y: int, end_x: int, end_y: int) -> float:
     """
     return ((end_x - x) ** 2 + (end_y - y) ** 2) ** 0.5
 
-
 def h_man(x: int, y: int, end_x: int, end_y: int) -> float:
     """Manhattan-Heuristic (Gitterbewegung) für A*.
     
@@ -207,13 +198,11 @@ def h_man(x: int, y: int, end_x: int, end_y: int) -> float:
     """
     return abs(end_x - x) + abs(end_y - y)
 
-
 # Heuristik-Registry
 HEURISTICS: Dict[str, Callable[[int, int, int, int], float]] = {
     "h_euk": h_euk,
     "h_man": h_man,
 }
-
 
 def f_n(h_value: float, g_value: float) -> float:
     """A*-Bewertungsfunktion f(n) = h(n) + g(n).
@@ -229,11 +218,8 @@ def f_n(h_value: float, g_value: float) -> float:
     """
     return h_value + g_value
 
-
 # ===== Maze-Manipulationen =====
-def open_random_walls(
-    maze: np.ndarray, count: int, measure_mode: bool = False
-):
+def open_random_walls(maze: np.ndarray, count: int, measure_mode: bool = False):
     """Öffnet zufällig 'count' Wände zwischen benachbarten Zellen.
     
     Erzeugt zusätzliche Pfade in einem generierten Maze zur Erhöhung der Komplexität.
@@ -276,10 +262,8 @@ def open_random_walls(
     if not measure_mode:
         yield {"type": "done", "pos": (0, 0)}
 
-
 # Alias für Kompatibilität
 Open_Random_Walls = open_random_walls
-
 
 # ===== Bildverarbeitung =====
 def import_img(
@@ -361,7 +345,6 @@ def export_img(cached_surface, filename: str = None) -> bool:
     except Exception as e:
         print(f"Fehler beim Export: {str(e)}")
         return False
-
 
 def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, int, int] = (0, 0, 0), 
                 path_color: Tuple[int, int, int] = (255, 255, 255), filename: str = None, 
