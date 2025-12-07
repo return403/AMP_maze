@@ -39,6 +39,7 @@ class Game:
         # Algorithmus-Status
         self.generator = None
         self.algorithm_running = False
+        self.algorithm_type = None  # 'generate' oder 'solve'
         self.animation = True
         
         # Rendering und Geometrie
@@ -343,10 +344,7 @@ class Game:
                     pygame.display.update()
                 
                 self.cache_from_screen(self.screen)
-            maze_h, maze_w = self.maze.shape[:2]
-            alg_name = self.gen_ui.selected_alg
-            export_img(self.cached_surface, filename=f"maze_{maze_h}x{maze_w}_{alg_name}.png")
-            maze_to_img(self.maze, filename=f"2_maze_{maze_h}x{maze_w}_{alg_name}.png")
+            
             self.algorithm_running = False
             self.generator = None
             return True
@@ -466,6 +464,8 @@ class Game:
             self.generator = None
         
         self.algorithm_running = self.generator is not None
+        self.algorithm_type = 'solve' if self.algorithm_running else None
+        self.algorithm_type = 'generate' if self.algorithm_running else None
 
     def _start_solving(self, points):
         """
@@ -683,11 +683,13 @@ class Game:
         
         # Generation starten
         if typ == "start" and mode == "c_gen" and self.data_gen is not None:
+            self.algorithm_type = "generate"
             self._start_generation(self.data_gen[0])
             return
 
         # Solving starten
         if typ == "start" and mode == "c_solve" and self.data_sol is not None:
+            self.algorithm_type = "solve"
             self._start_solving(self.data_sol[0])
             return
 

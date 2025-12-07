@@ -8,7 +8,7 @@ import psutil
 import os
 import pygame
 from collections import deque
-from maze_core import initialize_maze
+from maze_core import initialize_maze, maze_to_img
 from maze_graphics import draw_cell, init_pygame, Color, Game
 
 process = psutil.Process(os.getpid())
@@ -195,6 +195,15 @@ def main():
                         print(game.menu_tab)
                         game.show_stats(len(game.solve_path), elapsed, game.menu_tab)
                         print(f"{process.memory_info().rss / (1024 ** 2):.4f} MB")
+                        
+                        # Exportiere Maze nur bei Generierungsalgorithmen
+                        if game.algorithm_type == "generate":
+                            maze_h, maze_w = game.maze.shape[:2]
+                            maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png")
+                        elif game.algorithm_type == "solve":
+                            maze_h, maze_w = game.maze.shape[:2]
+                            maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png", solve_path=game.solve_path)
+                        
                         start_time = None
                 
                 except Exception as ex:
@@ -213,6 +222,9 @@ def main():
                     print(game.menu_tab)
                     game.show_stats(len(game.solve_path), elapsed, game.menu_tab)
                     print(f"{process.memory_info().rss / (1024 ** 2):.4f} MB")
+                    maze_h, maze_w = game.maze.shape[:2]
+                    maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png")
+
                     start_time = None
         
         # UI-Panel zeichnen

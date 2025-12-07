@@ -352,7 +352,7 @@ def export_img(cached_surface, filename: str = None) -> bool:
         
         # Speichere als PNG
         pil_image.save(filename)
-        print(f"✓ Maze erfolgreich exportiert: {filename}")
+        print(f"Maze erfolgreich exportiert: {filename}")
         return True
         
     except ImportError:
@@ -364,7 +364,8 @@ def export_img(cached_surface, filename: str = None) -> bool:
 
 
 def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, int, int] = (0, 0, 0), 
-                path_color: Tuple[int, int, int] = (255, 255, 255), filename: str = None) -> bool:
+                path_color: Tuple[int, int, int] = (255, 255, 255), filename: str = None, 
+                solve_path: List[Tuple[int, int]] = None, solve_color: Tuple[int, int, int] = (255, 0, 0)) -> bool:
     """Konvertiert ein Maze-Array direkt in eine PNG-Bilddatei.
     
     Malt das Maze als Bild, wobei Wände als schwarze Linien und Pfade als 
@@ -377,6 +378,8 @@ def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, in
         path_color: RGB-Farbe für Pfade (Standard: weiß = (255, 255, 255)).
         filename: Optionaler Ausgabedateiname. Wenn None, wird automatisch
                   generiert als "maze_HEIGHTxWIDTH.png".
+        solve_path: Optionale Liste von (x, y) Koordinaten des Lösungspfads.
+        solve_color: RGB-Farbe für den Lösungspfad (Standard: rot = (255, 0, 0)).
     
     Returns:
         True wenn erfolgreich, False bei Fehler.
@@ -417,6 +420,46 @@ def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, in
                         elif direction == "W":  # West-Wand
                             for i in range(cell_size + 1):
                                 pixels[px, py + i] = wall_color
+        
+        # Male Lösungspfad falls vorhanden
+        if solve_path:
+            colored_cells = set()
+            colored_connections = set()
+            
+            for i, (x, y) in enumerate(solve_path):
+                px = x * cell_size
+                py = y * cell_size
+                
+                # Fülle Zelle nur wenn noch nicht gefärbt
+                if (x, y) not in colored_cells:
+                    for dx in range(1, cell_size):
+                        for dy in range(1, cell_size):
+                            pixels[px + dx, py + dy] = solve_color
+                    colored_cells.add((x, y))
+                
+                # Male Verbindung zur nächsten Zelle
+                if i < len(solve_path) - 1:
+                    next_x, next_y = solve_path[i + 1]
+                    connection = ((x, y), (next_x, next_y))
+                    
+                    # Färbe Verbindung nur wenn noch nicht gefärbt
+                    if connection not in colored_connections:
+                        diff_x, diff_y = next_x - x, next_y - y
+                        
+                        if diff_x == 1:  # Osten
+                            for dy in range(1, cell_size):
+                                pixels[px + cell_size, py + dy] = solve_color
+                        elif diff_x == -1:  # Westen
+                            for dy in range(1, cell_size):
+                                pixels[px, py + dy] = solve_color
+                        elif diff_y == 1:  # Süden
+                            for dx in range(1, cell_size):
+                                pixels[px + dx, py + cell_size] = solve_color
+                        elif diff_y == -1:  # Norden
+                            for dx in range(1, cell_size):
+                                pixels[px + dx, py] = solve_color
+                        
+                        colored_connections.add(connection)
         
         # Generiere Dateiname wenn nicht angegeben
         if filename is None:
