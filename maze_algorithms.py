@@ -76,11 +76,15 @@ def dfs(start_x: int, start_y: int, maze: np.ndarray, measure_mode: bool = False
                 yield {"type": "forward", "from": (x, y), "to": (nx, ny)}
 
 
+import random
+from typing import Dict, Generator, Tuple
+
+import numpy as np
+
 def prim(start_x: int, start_y: int, maze: np.ndarray, measure_mode: bool = False) -> Generator[Dict, None, None]:
-    """Randomized Prim's Maze-Generator mit Frontier-Set-Verwaltung.
+    """Randomized Prim's Maze-Generator mit effizienter Frontier-Verwaltung.
     
-    Generiert perfekte Mazes durch Frontier-Expansion, ideal für große Mazes.
-    Verwaltet aktive Grenzregion mit zufälliger Wandöffnung.
+    Generiert perfekte Mazes durch Frontier-Expansion.
     
     Args:
         start_x: X-Koordinate des Startpunkts.
@@ -97,49 +101,61 @@ def prim(start_x: int, start_y: int, maze: np.ndarray, measure_mode: bool = Fals
     """
     h, w = maze.shape[:2]
     maze[start_y, start_x][VIS] = True
-    
+
     if not measure_mode:
         yield {"type": "start", "pos": (start_x, start_y)}
-    
-    # Initialisiere Frontier mit Nachbarn des Startpunkts
-    _, frontier_list = neighbor_dirs(start_x, start_y, maze, visited=False)
-    frontier: set = set(frontier_list)
-    
-    while frontier:
+
+    # Frontier als Liste initialisieren
+    _, initial_frontier = neighbor_dirs(start_x, start_y, maze, visited=False)
+    frontier_list: list[Tuple[int, int]] = []
+    in_frontier = np.zeros((h, w), dtype=bool)
+
+    for fx, fy in initial_frontier:
+        if not maze[fy, fx][VIS] and not in_frontier[fy, fx]:
+            frontier_list.append((fx, fy))
+            in_frontier[fy, fx] = True
+            if not measure_mode:
+                yield {"type": "frontier", "pos": (fx, fy)}
+
+    while frontier_list:
         # Wähle zufällige Zelle aus Frontier
-        x, y = random_direction(list(frontier))
+        idx = random.randrange(len(frontier_list))
+        x, y = frontier_list[idx]
+
+        # Finde Richtungen zu bereits besuchten Nachbarn
         visited_dirs, _ = neighbor_dirs(x, y, maze, visited=True)
-        
-        if not visited_dirs:
-            # Keine besuchten Nachbarn -> entferne aus Frontier
-            frontier.remove((x, y))
-            continue
-        
-        # Öffne Wand zu einem zufälligen besuchten Nachbarn
-        direction = random_direction(visited_dirs)
-        dir_idx, opp_idx, dx, dy = open_wall_index(direction)
-        maze[y, x][dir_idx] = False
-        nx, ny = x + dx, y + dy
-        maze[ny, nx][opp_idx] = False
-        maze[y, x][VIS] = True
-        
-        if not measure_mode:
-            yield {"type": "frontierNew", "from": (x, y), "to": (nx, ny)}
-        
-        # Füge unbesuchte Nachbarn zur Frontier hinzu
-        _, unvisited = neighbor_dirs(x, y, maze, visited=False)
-        for ux, uy in unvisited:
-            if not maze[uy, ux][VIS] and (ux, uy) not in frontier:
-                frontier.add((ux, uy))
-                if not measure_mode:
-                    yield {"type": "frontier", "pos": (ux, uy)}
-        
-        frontier.remove((x, y))
-    
+
+        if visited_dirs:
+            # Öffne Wand zu einem zufälligen besuchten Nachbarn
+            direction = random_direction(visited_dirs)
+            dir_idx, opp_idx, dx, dy = open_wall_index(direction)
+
+            nx, ny = x + dx, y + dy
+
+            maze[y, x][dir_idx] = False
+            maze[ny, nx][opp_idx] = False
+            maze[y, x][VIS] = True
+
+            if not measure_mode:
+                yield {"type": "frontierNew", "from": (x, y), "to": (nx, ny)}
+
+            # Füge unbesuchte Nachbarn zur Frontier hinzu
+            _, unvisited = neighbor_dirs(x, y, maze, visited=False)
+            for ux, uy in unvisited:
+                if not maze[uy, ux][VIS] and not in_frontier[uy, ux]:
+                    frontier_list.append((ux, uy))
+                    in_frontier[uy, ux] = True
+                    if not measure_mode:
+                        yield {"type": "frontier", "pos": (ux, uy)}
+
+        # Entferne (x, y) aus Frontier
+        in_frontier[y, x] = False
+        frontier_list[idx] = frontier_list[-1]
+        frontier_list.pop()
+
     if not measure_mode:
         yield {"type": "done", "pos": (start_x, start_y)}
-
-
+    
 
 # ===== Maze-Lösungsalgorithmen =====
 
@@ -422,7 +438,7 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
         
         for n in n_values_bench:
             print(f"\n=== Size {n}×{n} ({alg.__name__}) ===")
-            accumulator = [0.0, 0, 0, 0, 0]  # [avg_len, corridors, nodes, deadends, time]
+            _data = [0.0, 0, 0, 0, 0]  # [avg_len, corridors, nodes, deadends, time]
             
             for _ in range(runs):
                 m = initialize_maze(n, n)
@@ -436,16 +452,16 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
                 reset_visited(m)
                 avg_len, corr_cnt, node_cnt, dead_cnt = analyze_gen(m)
                 
-                accumulator[0] += avg_len
-                accumulator[1] += corr_cnt
-                accumulator[2] += node_cnt
-                accumulator[3] += dead_cnt
-                accumulator[4] += elapsed
+                _data[0] += avg_len
+                _data[1] += corr_cnt
+                _data[2] += node_cnt
+                _data[3] += dead_cnt
+                _data[4] += elapsed
             
             # Berechne Durchschnittswerte
-            avg = [x / runs for x in accumulator]
+            avg = [x / runs for x in _data]
             data.append(avg)
-            print(f"  {alg.__name__}: {avg[4]:.4f}s, corridors={avg[1]:.0f}, nodes={avg[2]:.0f}, deadends={avg[3]:.0f}, avg_len={avg[0]:.1f}")
+            print(f"  {alg.__name__}: {avg[4]:.4f}s, corridors={avg[1]:.0f}, nodes={avg[2]:.0f}, deadends={avg[3]:.0f}, avg_len={avg[0]:.4f}")
         
         plots.append(data)
     
@@ -465,7 +481,7 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
     fig, axes = plt.subplots(3, 2, figsize=(18, 20))
     fig.suptitle("Maze-Generierungs-Algorithmen: Vergleich", fontsize=18, fontweight='bold', y=0.995)
     
-    # Mapping: Anzeigereihenfolge → Datenindex im accumulator [avg_len, corridors, nodes, deadends, time]
+    # Mapping: Anzeigereihenfolge → Datenindex im _data [avg_len, corridors, nodes, deadends, time]
     data_indices = [4, 1, 2, 3, 0]  # [time, corridors, nodes, deadends, avg_len]
     
     for display_idx in range(5):
@@ -500,7 +516,7 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
     
     combined_filename = os.path.join(output_dir, "benchmark_gen_complete.png")
     fig.savefig(combined_filename, dpi=150, bbox_inches='tight')
-    print(f"✓ Gesamtplot gespeichert: {combined_filename}")
+    print(f"Gesamtplot gespeichert: {combined_filename}")
     
     # Speichere einzelne Subplots
     for display_idx in range(5):
@@ -526,7 +542,7 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
         
         filename = os.path.join(output_dir, f"benchmark_gen_metric_{display_idx+1}_{metric_labels[display_idx].replace(' ', '_').replace('(', '').replace(')', '')}.png")
         fig_single.savefig(filename, dpi=150, bbox_inches='tight')
-        print(f"✓ Subplot gespeichert: {filename}")
+        print(f"Subplot gespeichert: {filename}")
         plt.close(fig_single)
     
     print("\n=== Alle Plots gespeichert in output_plots/ ===")
@@ -711,7 +727,7 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
         wall_str = f"{num_walls}percent" if num_walls > 0 else "0_original"
         combined_filename = os.path.join(output_dir, f"benchmark_sol_walls_{wall_str}_complete.png")
         fig.savefig(combined_filename, dpi=150, bbox_inches='tight')
-        print(f"✓ Gesamtplot gespeichert: {combined_filename}")
+        print(f"Gesamtplot gespeichert: {combined_filename}")
         plt.close(fig)
         
         # Speichere einzelne Subplots
@@ -742,7 +758,7 @@ def benchmark_sol(max_n: int, step: int, runs: int, num_walls_list: List[int] = 
             wall_str = f"{num_walls}percent" if num_walls > 0 else "0_original"
             filename = os.path.join(output_dir, f"benchmark_sol_walls_{wall_str}_metric_{m_idx+1}_{label.replace(' ', '_').replace('/', '_').replace('(', '').replace(')', '')}.png")
             fig_single.savefig(filename, dpi=150, bbox_inches='tight')
-            print(f"✓ Subplot gespeichert: {filename}")
+            print(f"Subplot gespeichert: {filename}")
             plt.close(fig_single)
     
     print("\n=== Alle Plots gespeichert in output_plots/ ===")
