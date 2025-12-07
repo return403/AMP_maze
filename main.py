@@ -223,7 +223,12 @@ def main():
                     game.show_stats(len(game.solve_path), elapsed, game.menu_tab)
                     print(f"{process.memory_info().rss / (1024 ** 2):.4f} MB")
                     maze_h, maze_w = game.maze.shape[:2]
-                    maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png")
+                    
+                    # Exportiere mit Lösungspfad bei Solve-Algorithmen
+                    if game.algorithm_type == "solve":
+                        maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png", solve_path=game.solve_path)
+                    elif game.algorithm_type == "generate":
+                        maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png")
 
                     start_time = None
         
