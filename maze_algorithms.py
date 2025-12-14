@@ -448,6 +448,9 @@ def benchmark(max_n: int, step: int, runs: int, maze: np.ndarray, algs: List[Cal
             
             # Berechne Durchschnittswerte
             avg = [x / runs for x in _data]
+            print(f"corr : {avg[1]/n**2}:: node : {avg[2]/n**2}:: deadend: {avg[3]/n**2}")
+            if avg[1]/n**2 > 0:
+                print(f"corrlength calc: {(1-(avg[2]/(n**2))-(avg[3]/(n**2))) / (avg[1]/n**2)}")
             data.append(avg)
             print(f"  {alg.__name__}: {avg[4]:.4f}s, corridors={avg[1]:.0f}, nodes={avg[2]:.0f}, deadends={avg[3]:.0f}, avg_len={avg[0]:.4f}")
         
