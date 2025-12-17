@@ -191,13 +191,15 @@ def main():
                         game.show_stats(len(game.solve_path), elapsed, game.menu_tab)
                         print(f"{process.memory_info().rss / (1024 ** 2):.4f} MB")
                         
-                        # Exportiere Maze nur bei Generierungsalgorithmen
+                        # Exportiere Maze mit Heatmap und ggf. Lösungspfad
+                        maze_h, maze_w = game.maze.shape[:2]
+                        hm = game.sum_heatmaps()
+                        hm_to_use = hm if (hm is not None and hm.max() > 0) else None
+                        
                         if game.algorithm_type == "generate":
-                            maze_h, maze_w = game.maze.shape[:2]
-                            maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png")
+                            maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png", heatmap=hm_to_use)
                         elif game.algorithm_type == "solve":
-                            maze_h, maze_w = game.maze.shape[:2]
-                            maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png", solve_path=game.solve_path)
+                            maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png", solve_path=game.solve_path, heatmap=hm_to_use)
                         
                         start_time = None
                 
@@ -218,12 +220,14 @@ def main():
                     game.show_stats(len(game.solve_path), elapsed, game.menu_tab)
                     print(f"{process.memory_info().rss / (1024 ** 2):.4f} MB")
                     maze_h, maze_w = game.maze.shape[:2]
+                    hm = game.sum_heatmaps()
+                    hm_to_use = hm if (hm is not None and hm.max() > 0) else None
                     
-                    # Exportiere mit Lösungspfad bei Solve-Algorithmen
+                    # Exportiere mit Heatmap und ggf. Lösungspfad
                     if game.algorithm_type == "solve":
-                        maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png", solve_path=game.solve_path)
+                        maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png", solve_path=game.solve_path, heatmap=hm_to_use)
                     elif game.algorithm_type == "generate":
-                        maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png")
+                        maze_to_img(game.maze, filename=f"maze_{maze_h}x{maze_w}_{elapsed:.6f}.png", heatmap=hm_to_use)
 
                     start_time = None
         

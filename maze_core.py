@@ -267,7 +267,7 @@ Open_Random_Walls = open_random_walls
 
 # ===== Bildverarbeitung =====
 def import_img(
-    maze: np.ndarray, weight: float = 1.0, path: str = "bild.jpg", thresh: int = 180
+    maze: np.ndarray, weight: float = 1.0, path: str = "bild.jpg", thresh: int = 50
 ) -> np.ndarray:
     """Konvertiert ein Bild in eine Heatmap mit Maze-Dimensionen.
     
@@ -348,11 +348,14 @@ def export_img(cached_surface, filename: str = None) -> bool:
 
 def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, int, int] = (0, 0, 0), 
                 path_color: Tuple[int, int, int] = (255, 255, 255), filename: str = None, 
-                solve_path: List[Tuple[int, int]] = None, solve_color: Tuple[int, int, int] = (255, 0, 0)) -> bool:
+                solve_path: List[Tuple[int, int]] = None, solve_color: Tuple[int, int, int] = (255, 0, 0),
+                heatmap: np.ndarray = None, heatmap_colormap: str = "gray", 
+                output_dir: str = "output_images") -> bool:
     """Konvertiert ein Maze-Array direkt in eine PNG-Bilddatei.
     
     Malt das Maze als Bild, wobei Wände als schwarze Linien und Pfade als 
     weiße Flächen dargestellt werden. Nutzt DIR_MAP für konsistente Richtungsverarbeitung.
+    Optional wird eine Heatmap gemalt, gefolgt vom Lösungspfad.
     
     Args:
         maze: Maze-Array der Form (height, width, 5).
@@ -363,6 +366,9 @@ def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, in
                   generiert als "maze_HEIGHTxWIDTH.png".
         solve_path: Optionale Liste von (x, y) Koordinaten des Lösungspfads.
         solve_color: RGB-Farbe für den Lösungspfad (Standard: rot = (255, 0, 0)).
+        heatmap: Optionales 2D Numpy-Array mit Kostengewichten pro Zelle.
+        heatmap_colormap: Colormap-Name für Heatmap-Visualisierung (Standard: "gray").
+        output_dir: Ausgabeordner für Bilder (Standard: "output_images").
     
     Returns:
         True wenn erfolgreich, False bei Fehler.
@@ -372,7 +378,14 @@ def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, in
         return False
     
     try:
+        import os
+        
         h, w = maze.shape[:2]
+        
+        # Erstelle Ausgabeordner falls nicht vorhanden
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            print(f"Ausgabeordner erstellt: {output_dir}")
         
         # Berechne Bildgröße
         img_width = w * cell_size + 1
@@ -382,7 +395,42 @@ def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, in
         pil_image = Image.new("RGB", (img_width, img_height), path_color)
         pixels = pil_image.load()
         
-        # Male Zellen und Wände mittels DIR_MAP
+        # Male Heatmap falls vorhanden (VOR Wänden, damit Zellfarben sichtbar sind)
+        if heatmap is not None:
+            try:
+                import matplotlib.pyplot as plt
+                
+                # Normalisiere Heatmap auf [0, 1]
+                hm_min, hm_max = np.min(heatmap), np.max(heatmap)
+                if hm_max > hm_min:
+                    hm_normalized = (heatmap - hm_min) / (hm_max - hm_min)
+                else:
+                    hm_normalized = np.ones_like(heatmap, dtype=np.float32) * 0.5
+                
+                # Hole Colormap
+                cmap = plt.get_cmap(heatmap_colormap)
+                
+                # Male jede Zelle mit Heatmap-Farbe (ganze Zelle inklusive Ränder)
+                for y in range(h):
+                    for x in range(w):
+                        value = hm_normalized[y, x]
+                        rgba = cmap(value)  # Returns (R, G, B, A) in [0, 1]
+                        color = tuple(int(c * 255) for c in rgba[:3])  # Convert to RGB (0-255)
+                        
+                        px = x * cell_size
+                        py = y * cell_size
+                        
+                        # Fülle ganze Zelle (inkl. Rand) mit Heatmap-Farbe
+                        for dx in range(cell_size):
+                            for dy in range(cell_size):
+                                pixels[px + dx, py + dy] = color
+                
+                print(f"Heatmap gemalt: Min={hm_min:.4f}, Max={hm_max:.4f}")
+                
+            except ImportError:
+                print("Warnung: matplotlib nicht installiert. Heatmap wird übersprungen.")
+        
+        # Male Zellen und Wände mittels DIR_MAP (ÜBER Heatmap)
         for y in range(h):
             for x in range(w):
                 px = x * cell_size
@@ -404,7 +452,7 @@ def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, in
                             for i in range(cell_size + 1):
                                 pixels[px, py + i] = wall_color
         
-        # Male Lösungspfad falls vorhanden
+        # Male Lösungspfad falls vorhanden (über Heatmap und Wänden)
         if solve_path:
             colored_cells = set()
             colored_connections = set()
@@ -448,9 +496,13 @@ def maze_to_img(maze: np.ndarray, cell_size: int = 10, wall_color: Tuple[int, in
         if filename is None:
             filename = f"maze_{h}x{w}.png"
         
+        # Kombiniere mit Ausgabeordner
+        import os
+        filepath = os.path.join(output_dir, filename)
+        
         # Speichere als PNG
-        pil_image.save(filename)
-        print(f"Maze erfolgreich als Bild exportiert: {filename}")
+        pil_image.save(filepath)
+        print(f"Maze erfolgreich als Bild exportiert: {filepath}")
         return True
         
     except Exception as e:

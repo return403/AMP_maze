@@ -1,6 +1,6 @@
 
 # Display
-SCREEN_WIDTH = 1200
+SCREEN_WIDTH = 1400
 SCREEN_HEIGHT = 1000
 
 # UI Layout

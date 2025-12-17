@@ -428,6 +428,11 @@ class Game:
         if self.screen is not None and self.capture_rect is not None:
             self.clear_screen(self.screen)
         
+        # Lösche alte Solve-Daten beim Start einer neuen Generierung
+        self.solve_path = []
+        self.solve_points = None
+        self.solve_segment_index = 0
+        
         maze_w = maze_h = 10
         start_x = start_y = 0
         if len(points) >= 1:
@@ -458,7 +463,9 @@ class Game:
                     draw_cell(self.screen, self.maze, x, y, self.cell_size, color=Color.TEAL.value)
             self.cache_from_screen(self.screen)
             #export_img(self.cached_surface, filename=f"maze_{maze_h}x{maze_w}_{alg_name}.png")
-            maze_to_img(self.maze, filename=f"maze_{maze_h}x{maze_w}_{alg_name}.png")
+            hm = self.sum_heatmaps()
+            hm_to_use = hm if (hm is not None and hm.max() > 0) else None
+            maze_to_img(self.maze, filename=f"maze_{maze_h}x{maze_w}_{alg_name}.png", heatmap=hm_to_use)
         else:
             print("Unbekannter Generator:", alg_name)
             self.generator = None
