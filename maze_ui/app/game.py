@@ -457,8 +457,8 @@ class Game:
                 for x in range(maze_w):
                     draw_cell(self.screen, self.maze, x, y, self.cell_size, color=Color.TEAL.value)
             self.cache_from_screen(self.screen)
-            export_img(self.cached_surface, filename=f"maze_{maze_h}x{maze_w}_{alg_name}.png")
-            maze_to_img(self.maze, filename=f"2_maze_{maze_h}x{maze_w}_{alg_name}.png")
+            #export_img(self.cached_surface, filename=f"maze_{maze_h}x{maze_w}_{alg_name}.png")
+            maze_to_img(self.maze, filename=f"maze_{maze_h}x{maze_w}_{alg_name}.png")
         else:
             print("Unbekannter Generator:", alg_name)
             self.generator = None
