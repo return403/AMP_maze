@@ -210,11 +210,11 @@ def main():
             else:
                 # Ohne Animation: Alle Schritte direkt durchlaufen
                 deque(game.generator, maxlen=0)
+                algo_end_time = time.perf_counter()
                 
                 finished_all = game.on_algorithm_finished()
                 if finished_all and start_time is not None:
-                    end_time = time.perf_counter()
-                    elapsed = end_time - start_time
+                    elapsed = algo_end_time - start_time
                     print(f"Laufzeit: {elapsed:.6f} Sekunden")
                     print(game.menu_tab)
                     game.show_stats(len(game.solve_path), elapsed, game.menu_tab)
